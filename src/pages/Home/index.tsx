@@ -17,8 +17,8 @@ import {
 } from './styles';
 
 const newCycleValidationSchema = zod.object({
-  task: zod.string().min(1, 'Informe uma tarefa'),
-  minutesAmount: zod.number().min(5).max(60)
+  task: zod.string().min(5, 'Informe uma tarefa'),
+  minutesAmount: zod.number().min(1).max(60)
 });
 
 type CycleFormData = zod.infer<typeof newCycleValidationSchema>
@@ -28,7 +28,8 @@ interface Cycle{
   task: string,
   minutesAmount: number,
   startDate: Date,
-  interruptDate?: Date
+  interruptDate?: Date,
+  finishedDate?: Date
 }
 
 export function Home(){
@@ -59,16 +60,32 @@ export function Home(){
 
     if (activeCycle){
       interval = setInterval(() => {
-        setSecondsPassed(
-          differenceInSeconds(new Date(), activeCycle.startDate)
+        const secondsDiff = differenceInSeconds(
+          new Date(), 
+          activeCycle.startDate
         )
+
+        if (secondsDiff >= totalSeconds){
+          setCycles(state => state.map((cycle) => {
+            if (cycle.id === activeCycleId){
+              return { ...cycle, finishedDate: new Date() }
+            }else{
+              return cycle
+            }
+          }))
+
+          setSecondsPassed(totalSeconds)
+          clearInterval(interval);
+        }else{
+          setSecondsPassed(secondsDiff)
+        }
       }, 1000)
     }
 
     return (() => {
       clearInterval(interval);
     })
-  }, [activeCycle]);
+  }, [activeCycle, totalSeconds, activeCycleId]);
 
   useEffect(() => {
     if (activeCycle){
@@ -97,7 +114,7 @@ export function Home(){
   function handleReset(){
     
     if(activeCycle){
-      setCycles(cycles.map((cycle) => {
+      setCycles(state => state.map((cycle) => {
         if (cycle.id === activeCycleId){
           return { ...cycle, interruptDate: new Date()}
         }else{
@@ -134,7 +151,7 @@ export function Home(){
             type="number"
             placeholder="00" 
             step={5}
-            min={5}
+            min={1}
             max={60}
             {...register('minutesAmount', { valueAsNumber: true })}
             disabled={!!activeCycle}
